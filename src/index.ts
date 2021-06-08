@@ -10,6 +10,7 @@ interface LexToken {
     | "CHAR"
     | "ESCAPED_CHAR"
     | "MODIFIER"
+    | "ASTERISK"
     | "END";
   index: number;
   value: string;
@@ -25,7 +26,12 @@ function lexer(str: string): LexToken[] {
   while (i < str.length) {
     const char = str[i];
 
-    if (char === "*" || char === "+" || char === "?") {
+    if (char === "*") {
+      tokens.push({ type: "ASTERISK", index: i, value: str[i++] });
+      continue;
+    }
+
+    if (char === "+" || char === "?") {
       tokens.push({ type: "MODIFIER", index: i, value: str[i++] });
       continue;
     }
@@ -150,6 +156,14 @@ export function parse(str: string, options: ParseOptions = {}): Token[] {
     if (i < tokens.length && tokens[i].type === type) return tokens[i++].value;
   };
 
+  const tryConsumeModifier = (): string | undefined => {
+    const r = tryConsume("MODIFIER");
+    if (r) {
+      return r;
+    }
+    return tryConsume("ASTERISK");
+  };
+
   const mustConsume = (type: LexToken["type"]): string => {
     const value = tryConsume(type);
     if (value !== undefined) return value;
@@ -170,7 +184,11 @@ export function parse(str: string, options: ParseOptions = {}): Token[] {
   while (i < tokens.length) {
     const char = tryConsume("CHAR");
     const name = tryConsume("NAME");
-    const pattern = tryConsume("PATTERN");
+
+    let pattern = tryConsume("PATTERN");
+    if (!name && !pattern && tryConsume("ASTERISK")) {
+      pattern = ".*";
+    }
 
     if (name || pattern) {
       let prefix = char || "";
@@ -190,7 +208,7 @@ export function parse(str: string, options: ParseOptions = {}): Token[] {
         prefix,
         suffix: "",
         pattern: pattern || defaultPattern,
-        modifier: tryConsume("MODIFIER") || ""
+        modifier: tryConsumeModifier() || "",
       });
       continue;
     }
@@ -220,7 +238,7 @@ export function parse(str: string, options: ParseOptions = {}): Token[] {
         pattern: name && !pattern ? defaultPattern : pattern,
         prefix,
         suffix,
-        modifier: tryConsume("MODIFIER") || ""
+        modifier: tryConsumeModifier() || "",
       });
       continue;
     }
@@ -269,7 +287,7 @@ export function tokensToFunction<P extends object = object>(
   const { encode = (x: string) => x, validate = true } = options;
 
   // Compile all the tokens into regexps.
-  const matches = tokens.map(token => {
+  const matches = tokens.map((token) => {
     if (typeof token === "object") {
       return new RegExp(`^(?:${token.pattern})$`, reFlags);
     }
@@ -391,7 +409,7 @@ export function regexpToFunction<P extends object = object>(
 ): MatchFunction<P> {
   const { decode = (x: string) => x } = options;
 
-  return function(pathname: string) {
+  return function (pathname: string) {
     const m = re.exec(pathname);
     if (!m) return false;
 
@@ -405,7 +423,7 @@ export function regexpToFunction<P extends object = object>(
       const key = keys[i - 1];
 
       if (key.modifier === "*" || key.modifier === "+") {
-        params[key.name] = m[i].split(key.prefix + key.suffix).map(value => {
+        params[key.name] = m[i].split(key.prefix + key.suffix).map((value) => {
           return decode(value, key);
         });
       } else {
@@ -464,7 +482,7 @@ function regexpToRegexp(path: RegExp, keys?: Key[]): RegExp {
       prefix: "",
       suffix: "",
       modifier: "",
-      pattern: ""
+      pattern: "",
     });
     execResult = groupsRegex.exec(path.source);
   }
@@ -480,7 +498,7 @@ function arrayToRegexp(
   keys?: Key[],
   options?: TokensToRegexpOptions & ParseOptions
 ): RegExp {
-  const parts = paths.map(path => pathToRegexp(path, keys, options).source);
+  const parts = paths.map((path) => pathToRegexp(path, keys, options).source);
   return new RegExp(`(?:${parts.join("|")})`, flags(options));
 }
 
@@ -538,7 +556,7 @@ export function tokensToRegexp(
     strict = false,
     start = true,
     end = true,
-    encode = (x: string) => x
+    encode = (x: string) => x,
   } = options;
   const endsWith = `[${escapeString(options.endsWith || "")}]|$`;
   const delimiter = `[${escapeString(options.delimiter || "/#?")}]`;
