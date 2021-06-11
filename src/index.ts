@@ -462,7 +462,7 @@ export function regexpToFunction<P extends object = object>(
  * Escape a regular expression string.
  */
 function escapeString(str: string) {
-  return str.replace(/([.+*?=^!:${}()[\]|/\\])/g, "\\$1");
+  return str.replace(/([.+*?^${}()[\]|/\\])/g, "\\$1");
 }
 
 /**
