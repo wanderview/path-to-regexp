@@ -16,6 +16,14 @@ interface LexToken {
   value: string;
 }
 
+// Note, the `//u` suffix triggers this typescript linting bug:
+//
+//  https://github.com/buzinas/tslint-eslint-rules/issues/289
+//
+// This requires disabling the no-empty-character-class lint rule.
+const regexIdentifierStart = /[$_\p{ID_Start}]/u;
+const regexIdentifierPart = /[$_\u200C\u200D\p{ID_Continue}]/u;
+
 /**
  * Tokenize input string.
  */
@@ -56,17 +64,11 @@ function lexer(str: string): LexToken[] {
       let j = i + 1;
 
       while (j < str.length) {
-        const code = str.charCodeAt(j);
+        const code = str.substr(j, 1);
 
         if (
-          // `0-9`
-          (code >= 48 && code <= 57) ||
-          // `A-Z`
-          (code >= 65 && code <= 90) ||
-          // `a-z`
-          (code >= 97 && code <= 122) ||
-          // `_`
-          code === 95
+          (j === i + 1 && regexIdentifierStart.test(code)) ||
+          (j !== i + 1 && regexIdentifierPart.test(code))
         ) {
           name += str[j++];
           continue;

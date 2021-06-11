@@ -2286,6 +2286,25 @@ const TESTS: Test[] = [
     ],
     [[null, "packages/"]],
   ],
+  [
+    "/:café/",
+    undefined,
+    [
+      {
+        name: "café",
+        prefix: "/",
+        suffix: "",
+        modifier: "",
+        pattern: "[^\\/#\\?]+?",
+      },
+      "/",
+    ],
+    [
+      ["/route", null],
+      ["/route/", ["/route/", "route"]],
+    ],
+    [[{ café: "abc" }, "/abc/"]],
+  ],
 
   /**
    * Hostnames.
@@ -2811,6 +2830,12 @@ describe("path-to-regexp", function () {
     it("should throw on missing name", function () {
       expect(function () {
         pathToRegexp.pathToRegexp("/:(test)");
+      }).toThrow(new TypeError("Missing parameter name at 1"));
+    });
+
+    it("should throw on name starting with a digit", function () {
+      expect(function () {
+        pathToRegexp.pathToRegexp("/:0zero");
       }).toThrow(new TypeError("Missing parameter name at 1"));
     });
 
