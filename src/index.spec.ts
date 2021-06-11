@@ -2277,6 +2277,13 @@ const TESTS: Test[] = [
     [[null, "/café"]],
   ],
   [
+    "/café",
+    { encodePart: encodeURIComponent },
+    ["%2Fcaf%C3%A9"],
+    [["%2Fcaf%C3%A9", ["%2Fcaf%C3%A9"]]],
+    [[null, "%2Fcaf%C3%A9"]],
+  ],
+  [
     "packages/",
     undefined,
     ["packages/"],

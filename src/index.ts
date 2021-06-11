@@ -131,6 +131,14 @@ function lexer(str: string): LexToken[] {
   return tokens;
 }
 
+/**
+ * Callback type that is invoked for every plain text part of the pattern.
+ * This is intended to be used to apply URL canonicalization to the pattern
+ * itself.  This is different from the encode callback used to encode group
+ * values passed to compile, match, etc.
+ */
+type EncodePartCallback = (value: string) => string;
+
 export interface ParseOptions {
   /**
    * Set the default delimiter for repeat parameters. (default: `'/'`)
@@ -140,6 +148,11 @@ export interface ParseOptions {
    * List of characters to automatically consider prefixes when parsing.
    */
   prefixes?: string;
+
+  /**
+   * Encoding callback to apply to each plaintext part of the pattern.
+   */
+  encodePart?: EncodePartCallback;
 }
 
 /**
@@ -183,6 +196,11 @@ export function parse(str: string, options: ParseOptions = {}): Token[] {
     return result;
   };
 
+  const DefaultEncodePart = (value: string): string => {
+    return value;
+  };
+  const encodePart = options.encodePart || DefaultEncodePart;
+
   while (i < tokens.length) {
     const char = tryConsume("CHAR");
     const name = tryConsume("NAME");
@@ -201,13 +219,13 @@ export function parse(str: string, options: ParseOptions = {}): Token[] {
       }
 
       if (path) {
-        result.push(path);
+        result.push(encodePart(path));
         path = "";
       }
 
       result.push({
         name: name || key++,
-        prefix,
+        prefix: encodePart(prefix),
         suffix: "",
         pattern: pattern || defaultPattern,
         modifier: tryConsumeModifier() || "",
@@ -222,7 +240,7 @@ export function parse(str: string, options: ParseOptions = {}): Token[] {
     }
 
     if (path) {
-      result.push(path);
+      result.push(encodePart(path));
       path = "";
     }
 
@@ -241,8 +259,8 @@ export function parse(str: string, options: ParseOptions = {}): Token[] {
       result.push({
         name: name || (pattern ? key++ : ""),
         pattern: name && !pattern ? defaultPattern : pattern,
-        prefix,
-        suffix,
+        prefix: encodePart(prefix),
+        suffix: encodePart(suffix),
         modifier: tryConsumeModifier() || "",
       });
       continue;
