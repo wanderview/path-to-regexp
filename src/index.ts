@@ -1,7 +1,7 @@
 /**
  * Tokenizer results.
  */
-interface LexToken {
+export interface LexToken {
   type:
     | "OPEN"
     | "CLOSE"
@@ -11,6 +11,7 @@ interface LexToken {
     | "ESCAPED_CHAR"
     | "MODIFIER"
     | "ASTERISK"
+    | "INVALID_CHAR"
     | "END";
   index: number;
   value: string;
@@ -27,12 +28,17 @@ const regexIdentifierPart = /[$_\u200C\u200D\p{ID_Continue}]/u;
 /**
  * Tokenize input string.
  */
-function lexer(str: string): LexToken[] {
+export function lexer(str: string, lenient: boolean = false): LexToken[] {
   const tokens: LexToken[] = [];
   let i = 0;
 
   while (i < str.length) {
     const char = str[i];
+
+    const ErrorOrInvalid = function (msg: string) {
+      if (!lenient) throw new TypeError(msg);
+      tokens.push({ type: "INVALID_CHAR", index: i, value: str[i++] });
+    };
 
     if (char === "*") {
       tokens.push({ type: "ASTERISK", index: i, value: str[i++] });
@@ -77,7 +83,10 @@ function lexer(str: string): LexToken[] {
         break;
       }
 
-      if (!name) throw new TypeError(`Missing parameter name at ${i}`);
+      if (!name) {
+        ErrorOrInvalid(`Missing parameter name at ${i}`);
+        continue;
+      }
 
       tokens.push({ type: "NAME", index: i, value: name });
       i = j;
@@ -88,9 +97,11 @@ function lexer(str: string): LexToken[] {
       let count = 1;
       let pattern = "";
       let j = i + 1;
+      let error = false;
 
       if (str[j] === "?") {
-        throw new TypeError(`Pattern cannot start with "?" at ${j}`);
+        ErrorOrInvalid(`Pattern cannot start with "?" at ${j}`);
+        continue;
       }
 
       while (j < str.length) {
@@ -108,15 +119,27 @@ function lexer(str: string): LexToken[] {
         } else if (str[j] === "(") {
           count++;
           if (str[j + 1] !== "?") {
-            throw new TypeError(`Capturing groups are not allowed at ${j}`);
+            ErrorOrInvalid(`Capturing groups are not allowed at ${j}`);
+            error = true;
+            break;
           }
         }
 
         pattern += str[j++];
       }
 
-      if (count) throw new TypeError(`Unbalanced pattern at ${i}`);
-      if (!pattern) throw new TypeError(`Missing pattern at ${i}`);
+      if (error) {
+        continue;
+      }
+
+      if (count) {
+        ErrorOrInvalid(`Unbalanced pattern at ${i}`);
+        continue;
+      }
+      if (!pattern) {
+        ErrorOrInvalid(`Missing pattern at ${i}`);
+        continue;
+      }
 
       tokens.push({ type: "PATTERN", index: i, value: pattern });
       i = j;

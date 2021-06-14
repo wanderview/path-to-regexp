@@ -2950,6 +2950,42 @@ describe("path-to-regexp", function () {
     });
   });
 
+  describe("lexer", function () {
+    it("should leniently tokenize bad ':'", function () {
+      expect(pathToRegexp.lexer("https://foo.com", true)).toEqual([
+        { type: "CHAR", index: 0, value: "h" },
+        { type: "CHAR", index: 1, value: "t" },
+        { type: "CHAR", index: 2, value: "t" },
+        { type: "CHAR", index: 3, value: "p" },
+        { type: "CHAR", index: 4, value: "s" },
+        { type: "INVALID_CHAR", index: 5, value: ":" },
+        { type: "CHAR", index: 6, value: "/" },
+        { type: "CHAR", index: 7, value: "/" },
+        { type: "CHAR", index: 8, value: "f" },
+        { type: "CHAR", index: 9, value: "o" },
+        { type: "CHAR", index: 10, value: "o" },
+        { type: "CHAR", index: 11, value: "." },
+        { type: "CHAR", index: 12, value: "c" },
+        { type: "CHAR", index: 13, value: "o" },
+        { type: "CHAR", index: 14, value: "m" },
+        { type: "END", index: 15, value: "" },
+      ]);
+    });
+
+    it("should leniently tokenize bad '('", function () {
+      expect(pathToRegexp.lexer("foo(bar", true)).toEqual([
+        { type: "CHAR", index: 0, value: "f" },
+        { type: "CHAR", index: 1, value: "o" },
+        { type: "CHAR", index: 2, value: "o" },
+        { type: "INVALID_CHAR", index: 3, value: "(" },
+        { type: "CHAR", index: 4, value: "b" },
+        { type: "CHAR", index: 5, value: "a" },
+        { type: "CHAR", index: 6, value: "r" },
+        { type: "END", index: 7, value: "" },
+      ]);
+    });
+  });
+
   describe("compile errors", function () {
     it("should throw when a required param is undefined", function () {
       const toPath = pathToRegexp.compile("/a/:b/c");
