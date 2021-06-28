@@ -2035,7 +2035,7 @@ const TESTS: Test[] = [
     [],
   ],
   [
-    "/:remote([\\w-.]+)/:user([\\w-]+)",
+    "/:remote([\\w.-]+)/:user([\\w-]+)",
     undefined,
     [
       {
@@ -2043,7 +2043,7 @@ const TESTS: Test[] = [
         prefix: "/",
         suffix: "",
         modifier: "",
-        pattern: "[\\w-.]+",
+        pattern: "[\\w.-]+",
       },
       {
         name: "user",
